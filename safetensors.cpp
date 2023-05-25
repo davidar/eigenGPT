@@ -53,9 +53,22 @@ safetensors_t::safetensors_t(
     std::vector<char> &storage)
     : meta(meta), storage(storage) {}
 
-std::span<const char> safetensors_t::operator[](const char *name) const {
+std::span<const char> safetensors_t::operator[](std::string name) const {
   const auto [t_begin, t_end] = meta.at(name).data_offsets;
   return {storage.begin() + static_cast<ptrdiff_t>(t_begin),
           storage.begin() + static_cast<ptrdiff_t>(t_end)};
 }
+
+Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>> safetensors_t::matrix(std::string name) const {
+  const metadata_t m = meta.at(name);
+  float* data = (float*) &storage[m.data_offsets.first];
+  return Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(data, m.shape[0], m.shape[1]);
+}
+
+Eigen::Map<Eigen::VectorXf> safetensors_t::vector(std::string name) const {
+  const metadata_t m = meta.at(name);
+  float* data = (float*) &storage[m.data_offsets.first];
+  return Eigen::Map<Eigen::VectorXf>(data, m.shape[0]);
+}
+
 } // namespace huggingface::safetensors

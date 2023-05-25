@@ -7,7 +7,8 @@
 
 #include <span>
 
-#include "nlohmann/json.hpp"
+#include <Eigen/Dense>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -75,7 +76,11 @@ public:
 
   inline size_t size() const { return meta.size(); }
 
-  std::span<const char> operator[](const char *name) const;
+  std::span<const char> operator[](std::string name) const;
+
+  Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>> matrix(std::string name) const;
+
+  Eigen::Map<Eigen::VectorXf> vector(std::string name) const;
 };
 
 safetensors_t deserialize(std::basic_istream<char> &in);
