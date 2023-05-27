@@ -18,7 +18,7 @@ constexpr size_t D = n_embd / n_head;
 
 class TransformerBlock {
 public:
-  Matrix<float, Dynamic, 3 * n_embd> qkv;
+  Matrix<float, Dynamic, 2 * n_embd> kv;
 
   Matrix<float, n_embd, 3 * n_embd> w_attn1;
   Vector<float, 3 * n_embd> b_attn1;
@@ -33,7 +33,7 @@ public:
   Vector<float, n_embd> b_mlp2;
 
   TransformerBlock(safetensors::safetensors_t param, int b)
-      : qkv(0, 3 * n_embd),
+      : kv(0, 2 * n_embd),
         w_attn1(param.matrix(format("h.{}.attn.c_attn.weight", b))),
         b_attn1(param.vector(format("h.{}.attn.c_attn.bias", b))),
         w_attn2(param.matrix(format("h.{}.attn.c_proj.weight", b))),
@@ -51,15 +51,17 @@ public:
   }
 
   void operator()(Vector<float, n_embd> &x) {
-    qkv.conservativeResize(qkv.rows() + 1, Eigen::NoChange);
-    qkv.row(qkv.rows() - 1) =
+    auto n_seq = kv.rows();
+    Vector<float, 3 * n_embd> qkv_x =
         w_attn1.transpose() * (x.array() - x.mean()).matrix().normalized() +
         b_attn1;
+    kv.conservativeResize(n_seq + 1, NoChange);
+    kv.row(n_seq) = qkv_x.segment(n_embd, 2 * n_embd);
     Vector<float, n_embd> attn;
     for (int i = 0; i < n_head; i++) {
-      Vector<float, D> q = qkv.row(qkv.rows() - 1).segment(D * i, D);
-      auto k = qkv.middleCols(D * (n_head + i), D);
-      auto v = qkv.middleCols(D * (2 * n_head + i), D);
+      Vector<float, D> q = qkv_x.segment(D * i, D);
+      auto k = kv.middleCols(D * i, D);
+      auto v = kv.middleCols(D * (n_head + i), D);
       VectorXf a = (k * q / sqrt(D)).array().exp();
       a /= a.array().sum();
       attn.segment(D * i, D) = v.transpose() * a;
