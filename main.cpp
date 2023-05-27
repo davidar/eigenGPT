@@ -7,6 +7,7 @@
 #include <unsupported/Eigen/SpecialFunctions>
 
 #include "safetensors.hpp"
+#include "token.hpp"
 
 using namespace Eigen;
 
@@ -112,6 +113,9 @@ public:
 
 int main() {
   fmt::println("Loading model");
+  std::ifstream merge("../gpt2-tokenizer/tokenizer/assets/merges.txt");
+  std::ifstream vocab("../gpt2-tokenizer/tokenizer/assets/vocab.txt");
+  Tokeniser tokeniser(merge, vocab);
   fs::path path = "../gpt2/model.safetensors";
   if (!fs::exists(path))
     throw std::runtime_error("File does not exist");
@@ -135,8 +139,8 @@ int main() {
   auto b_ln = param.vector("ln_f.bias");
 
   fmt::println("Generating text");
-  std::vector<int> prompt = {36235, 39141, 18765, 1143, 326,
-                             9061,  561,   530,   1110, 1716};
+  std::vector<int> prompt =
+      tokeniser("Alan Turing theorized that computers would one day become");
   int n_tokens_to_generate = 40;
   std::vector<int> tokens = prompt;
   int total = tokens.size() + n_tokens_to_generate;
@@ -155,7 +159,7 @@ int main() {
       int token;
       logits.maxCoeff(&token);
       tokens.push_back(token);
-      fmt::println("{}", token);
+      fmt::println("{}", tokeniser(std::vector<int>{token}));
     }
   }
 }

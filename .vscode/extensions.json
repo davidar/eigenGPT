@@ -3,6 +3,8 @@
         "ms-vscode.cmake-tools",
         "ms-vscode.cpptools-extension-pack",
         "xaver.clang-format",
-        "mutantdino.resourcemonitor"
+        "mutantdino.resourcemonitor",
+        "eamodio.gitlens",
+        "github.copilot"
     ]
 }
