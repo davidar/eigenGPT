@@ -44,29 +44,36 @@ public:
         b_mlp2(param.vector(format("h.{}.mlp.c_proj.bias", b))) {
     b_attn1 += w_attn1 * param.vector(format("h.{}.ln_1.bias", b));
     w_attn1.array().rowwise() *=
-        param.vector(format("h.{}.ln_1.weight", b)).array().transpose() * sqrt(n_embd);
+        param.vector(format("h.{}.ln_1.weight", b)).array().transpose() *
+        sqrt(n_embd);
     b_mlp1 += w_mlp1 * param.vector(format("h.{}.ln_2.bias", b));
     w_mlp1.array().rowwise() *=
-        param.vector(format("h.{}.ln_2.weight", b)).array().transpose() * sqrt(n_embd);
+        param.vector(format("h.{}.ln_2.weight", b)).array().transpose() *
+        sqrt(n_embd);
   }
 
   void operator()(Vector<float, n_embd> &x) {
+    // update kv cache
     auto n_seq = kv.rows();
     Vector<float, 3 *n_embd> qkv_x = w_attn1 * norm(x) + b_attn1;
     kv.conservativeResize(n_seq + 1, NoChange);
-    kv.row(n_seq) = qkv_x.segment(n_embd, 2 * n_embd);
+    kv.row(n_seq) = qkv_x.segment<2 * n_embd>(n_embd);
+
+    // attention
     Vector<float, n_embd> attn;
     for (int i = 0; i < n_head; i++) {
-      Vector<float, D> q = qkv_x.segment(D * i, D);
-      auto k = kv.middleCols(D * i, D);
-      auto v = kv.middleCols(D * (n_head + i), D);
+      Vector<float, D> q = qkv_x.segment<D>(D * i);
+      auto k = kv.middleCols<D>(D * i);
+      auto v = kv.middleCols<D>(D * i + n_embd);
       VectorXf a = (k * q / sqrt(D)).array().exp();
-      a /= a.array().sum();
-      attn.segment(D * i, D) = v.transpose() * a;
+      a /= a.sum();
+      attn.segment<D>(D * i) = v.transpose() * a;
     }
     x += w_attn2 * attn + b_attn2;
+
+    // mlp
     Vector<float, 4 *n_embd> h = w_mlp1 * norm(x) + b_mlp1;
-    h.array() *= (1 + (h / sqrt(2)).array().erf()) / 2;
+    h.array() *= (1 + (h / sqrt(2)).array().erf()) / 2; // gelu
     x += w_mlp2 * h + b_mlp2;
   }
 
