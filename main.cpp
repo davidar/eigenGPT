@@ -44,17 +44,17 @@ int main() {
   for (int posn = 0; posn < total; posn++) {
     int token = tokens[posn];
     std::cerr << tokeniser(std::vector<int>{token});
-    Eigen::VectorXf x = wte.row(token) + wpe.row(posn);
+    Eigen::Vector<float, n_embd> x = wte.row(token) + wpe.row(posn);
     for (auto &block : blocks) {
       block(x);
     }
-    Eigen::VectorXf final =
-        (x.array() - x.mean()).matrix().normalized().array() * w_ln.array() +
-        b_ln.array();
-    Eigen::VectorXf logits = wte * final;
+    x.array() -= x.mean();
+    x.normalize();
+    x.array() *= w_ln.array();
+    x += b_ln;
+    auto logits = wte * x;
+    logits.maxCoeff(&token);
     if (posn + 1 >= tokens.size()) {
-      int token;
-      logits.maxCoeff(&token);
       tokens.push_back(token);
     }
   }
