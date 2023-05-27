@@ -1,18 +1,14 @@
-//
-// Created by mfuntowicz on 3/28/23.
-//
+// https://gist.github.com/Narsil/5d6bf307995158ad2c4994f323967284
 
 #ifndef SAFETENSORS_H
 #define SAFETENSORS_H
-
-#include <span>
 
 #include <Eigen/Dense>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-namespace huggingface::safetensors {
+namespace safetensors {
 enum dtype_t {
   /// Boolean type
   kBOOL,
@@ -72,18 +68,67 @@ public:
 
 public:
   safetensors_t(std::unordered_map<std::string, const metadata_t> &,
-                std::vector<char> &);
+                std::vector<char> &)
+      : meta(meta), storage(storage) {}
 
   inline size_t size() const { return meta.size(); }
 
-  std::span<const char> operator[](std::string name) const;
+  Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>
+  matrix(std::string name) const {
+    const metadata_t m = meta.at(name);
+    assert(m.shape.size() == 2);
+    float *data = (float *)&storage[m.data_offsets.first];
+    return Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(
+        data, m.shape[0], m.shape[1]);
+  }
 
-  Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>> matrix(std::string name) const;
-
-  Eigen::Map<Eigen::VectorXf> vector(std::string name) const;
+  Eigen::Map<Eigen::VectorXf> vector(std::string name) const {
+    const metadata_t m = meta.at(name);
+    assert(m.shape.size() == 1);
+    float *data = (float *)&storage[m.data_offsets.first];
+    return Eigen::Map<Eigen::VectorXf>(data, m.shape[0]);
+  }
 };
 
-safetensors_t deserialize(std::basic_istream<char> &in);
-} // namespace huggingface::safetensors
+safetensors_t deserialize(std::basic_istream<char> &in) {
+  uint64_t header_size = 0;
+
+  // todo: handle exception
+  in.read(reinterpret_cast<char *>(&header_size), sizeof header_size);
+
+  std::vector<char> meta_block(header_size);
+  in.read(meta_block.data(), static_cast<std::streamsize>(header_size));
+  const auto metadatas = json::parse(meta_block);
+
+  // How many bytes remaining to pre-allocate the storage tensor
+  in.seekg(0, std::ios::end);
+  std::streamsize f_size = in.tellg();
+  in.seekg(8 + header_size, std::ios::beg);
+  const auto tensors_size = f_size - 8 - header_size;
+
+  auto metas_table =
+      std::unordered_map<std::string, const metadata_t>(metadatas.size());
+  auto tensors_storage = std::vector<char>(tensors_size);
+
+  // Read the remaining content
+  in.read(tensors_storage.data(), static_cast<std::streamsize>(tensors_size));
+
+  // Populate the meta lookup table
+  if (metadatas.is_object()) {
+    for (auto &item : metadatas.items()) {
+      if (item.key() != "__metadata__") {
+        const auto name = std::string(item.key());
+        const auto &info = item.value();
+
+        const metadata_t meta = {info["dtype"].get<dtype_t>(), info["shape"],
+                                 info["data_offsets"]};
+        metas_table.insert(std::pair(name, meta));
+      }
+    }
+  }
+
+  return {metas_table, tensors_storage};
+}
+} // namespace safetensors
 
 #endif // SAFETENSORS_H

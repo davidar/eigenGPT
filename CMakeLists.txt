@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 # create project
 project(MyProject)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 # add executable
-add_executable(main main.cpp safetensors.cpp)
+add_executable(main main.cpp)
 
 # add dependencies
 include(cmake/CPM.cmake)
