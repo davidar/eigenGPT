@@ -114,11 +114,11 @@ public:
 };
 
 int main() {
-  fs::path path = "../model.safetensors";
+  fs::path path = "../gpt2/model.safetensors";
   if (!fs::exists(path))
     throw std::runtime_error("File does not exist");
   std::ifstream model(path, std::ios::binary);
-  auto param = safetensors::deserialize(model);
+  auto param = safetensors::safetensors_t(model);
   for (auto &[name, meta] : param.meta) {
     fmt::println("{}: {} {}", name, json(meta.dtype).dump(),
                  json(meta.shape).dump());
