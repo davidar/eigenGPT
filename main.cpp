@@ -147,6 +147,7 @@ int main() {
   assert(total < n_ctx);
   for (int posn = 0; posn < total; posn++) {
     int token = tokens[posn];
+    std::cerr << tokeniser(std::vector<int>{token});
     Eigen::VectorXf x = wte.row(token) + wpe.row(posn);
     for (auto &block : blocks) {
       block(x);
@@ -159,7 +160,6 @@ int main() {
       int token;
       logits.maxCoeff(&token);
       tokens.push_back(token);
-      fmt::println("{}", tokeniser(std::vector<int>{token}));
     }
   }
 }
