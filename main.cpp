@@ -47,12 +47,10 @@ public:
         b_mlp1(param.vector(format("h.{}.mlp.c_fc.bias", b))),
         w_mlp2(param.matrix(format("h.{}.mlp.c_proj.weight", b))),
         b_mlp2(param.vector(format("h.{}.mlp.c_proj.bias", b))) {
-    b_attn1 += param.vector(format("h.{}.ln_1.bias", b)).transpose() *
-               param.matrix(format("h.{}.attn.c_attn.weight", b));
+    b_attn1 += param.vector(format("h.{}.ln_1.bias", b)).transpose() * w_attn1;
     w_attn1.array().colwise() *=
         param.vector(format("h.{}.ln_1.weight", b)).array() * sqrt(n_embd);
-    b_mlp1 += param.vector(format("h.{}.ln_2.bias", b)).transpose() *
-              param.matrix(format("h.{}.mlp.c_fc.weight", b));
+    b_mlp1 += param.vector(format("h.{}.ln_2.bias", b)).transpose() * w_mlp1;
     w_mlp1.array().colwise() *=
         param.vector(format("h.{}.ln_2.weight", b)).array() * sqrt(n_embd);
 
@@ -89,23 +87,22 @@ public:
       x += h @ self.w_mlp2 + self.b_mlp2
       return x
   */
-  void operator()(Eigen::VectorXf &x) {
+  void operator()(VectorXf &x) {
     qkv.conservativeResize(qkv.rows() + 1, Eigen::NoChange);
-    VectorXf qkv_row =
+    qkv.row(qkv.rows() - 1) =
         w_attn1.transpose() * (x.array() - x.mean()).matrix().normalized() +
         b_attn1;
-    qkv.row(qkv.rows() - 1) = qkv_row;
-    Eigen::VectorXf attn(n_embd);
+    VectorXf attn(n_embd);
     for (int i = 0; i < n_head; i++) {
-      VectorXf q = qkv.row(qkv.rows() - 1).segment(D * i, D) / sqrt(D);
-      MatrixXf k = qkv.middleCols(D * (n_head + i), D);
-      MatrixXf v = qkv.middleCols(D * (2 * n_head + i), D);
-      VectorXf qk = k * q;
-      VectorXf a = qk.array().exp();
-      attn.segment(D * i, D) = v.transpose() * a / a.array().sum();
+      VectorXf q = qkv.row(qkv.rows() - 1).segment(D * i, D);
+      auto k = qkv.middleCols(D * (n_head + i), D);
+      auto v = qkv.middleCols(D * (2 * n_head + i), D);
+      VectorXf a = (k * q / sqrt(D)).array().exp();
+      a /= a.array().sum();
+      attn.segment(D * i, D) = v.transpose() * a;
     }
     x += w_attn2.transpose() * attn + b_attn2;
-    Eigen::VectorXf h =
+    VectorXf h =
         w_mlp1.transpose() * (x.array() - x.mean()).matrix().normalized() +
         b_mlp1;
     h.array() *= (1 + (h / sqrt(2)).array().erf()) / 2;
@@ -114,6 +111,7 @@ public:
 };
 
 int main() {
+  fmt::println("Loading model");
   fs::path path = "../gpt2/model.safetensors";
   if (!fs::exists(path))
     throw std::runtime_error("File does not exist");
@@ -124,21 +122,25 @@ int main() {
                  json(meta.shape).dump());
   }
 
+  fmt::println("Building model");
+  std::vector<TransformerBlock> blocks;
+  for (int b = 0; b < n_layer; b++) {
+    fmt::println("Building block {}/{}", b + 1, n_layer);
+    blocks.emplace_back(param, b);
+  }
+
   auto wte = param.matrix("wte.weight");
   auto wpe = param.matrix("wpe.weight");
   auto w_ln = param.vector("ln_f.weight") * sqrt(n_embd);
   auto b_ln = param.vector("ln_f.bias");
 
+  fmt::println("Generating text");
   std::vector<int> prompt = {36235, 39141, 18765, 1143, 326,
                              9061,  561,   530,   1110, 1716};
   int n_tokens_to_generate = 40;
   std::vector<int> tokens = prompt;
   int total = tokens.size() + n_tokens_to_generate;
   assert(total < n_ctx);
-  std::vector<TransformerBlock> blocks;
-  for (int b = 0; b < n_layer; b++) {
-    blocks.emplace_back(param, b);
-  }
   for (int posn = 0; posn < total; posn++) {
     int token = tokens[posn];
     Eigen::VectorXf x = wte.row(token) + wpe.row(posn);

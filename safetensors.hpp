@@ -8,6 +8,9 @@
 
 using json = nlohmann::json;
 
+using MatrixXfRowMajor =
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 namespace safetensors {
 enum dtype_t {
   /// Boolean type
@@ -100,13 +103,11 @@ public:
 
   inline size_t size() const { return meta.size(); }
 
-  Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>
-  matrix(std::string name) const {
+  Eigen::Map<MatrixXfRowMajor> matrix(std::string name) const {
     const metadata_t m = meta.at(name);
     assert(m.shape.size() == 2);
     float *data = (float *)&storage[m.data_offsets.first];
-    return Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(
-        data, m.shape[0], m.shape[1]);
+    return Eigen::Map<MatrixXfRowMajor>(data, m.shape[0], m.shape[1]);
   }
 
   Eigen::Map<Eigen::VectorXf> vector(std::string name) const {
