@@ -16,6 +16,8 @@ constexpr size_t n_layer = 12;
 constexpr size_t n_vocab = 50257;
 constexpr size_t D = n_embd / n_head;
 
+using Embedding = Vector<float, n_embd>;
+
 class TransformerBlock {
 public:
   Matrix<float, Dynamic, 2 * n_embd> kv;
@@ -52,7 +54,7 @@ public:
         sqrt(n_embd);
   }
 
-  void operator()(Vector<float, n_embd> &x) {
+  void operator()(Embedding &x) {
     // update kv cache
     auto n_seq = kv.rows();
     Vector<float, 3 *n_embd> qkv_x = w_attn1 * norm(x) + b_attn1;
@@ -60,7 +62,7 @@ public:
     kv.row(n_seq) = qkv_x.segment<2 * n_embd>(n_embd);
 
     // attention
-    Vector<float, n_embd> attn;
+    Embedding attn;
     for (int i = 0; i < n_head; i++) {
       Vector<float, D> q = qkv_x.segment<D>(D * i);
       auto k = kv.middleCols<D>(D * i);
@@ -77,7 +79,7 @@ public:
     x += w_mlp2 * h + b_mlp2;
   }
 
-  static Vector<float, n_embd> norm(const Vector<float, n_embd> &x) {
+  static Embedding norm(const Embedding &x) {
     return (x.array() - x.mean()).matrix().normalized();
   }
 };

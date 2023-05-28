@@ -44,7 +44,7 @@ int main() {
   for (int posn = 0; posn < total; posn++) {
     int token = tokens[posn];
     std::cerr << tokeniser(std::vector<int>{token});
-    Eigen::Vector<float, n_embd> x = wte.row(token) + wpe.row(posn);
+    Embedding x = wte.row(token) + wpe.row(posn);
     for (auto &block : blocks) {
       block(x);
     }
