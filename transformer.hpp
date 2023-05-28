@@ -20,6 +20,7 @@ using Embedding = Vector<float, n_embd>;
 
 class TransformerBlock {
 public:
+  // (k,v) cache, rows are added for each token
   Matrix<float, Dynamic, 2 * n_embd> kv;
 
   Matrix<float, 3 * n_embd, n_embd> w_attn1;
@@ -44,6 +45,8 @@ public:
         b_mlp1(param.vector(format("h.{}.mlp.c_fc.bias", b))),
         w_mlp2(param.matrix(format("h.{}.mlp.c_proj.weight", b)).transpose()),
         b_mlp2(param.vector(format("h.{}.mlp.c_proj.bias", b))) {
+
+    // bake the normalisation constants into the weights
     b_attn1 += w_attn1 * param.vector(format("h.{}.ln_1.bias", b));
     w_attn1.array().rowwise() *=
         param.vector(format("h.{}.ln_1.weight", b)).array().transpose() *
@@ -79,7 +82,9 @@ public:
     x += w_mlp2 * h + b_mlp2;
   }
 
-  static Embedding norm(const Embedding &x) {
-    return (x.array() - x.mean()).matrix().normalized();
+  static Embedding norm(Embedding x) {
+    x.array() -= x.mean();
+    x.normalize();
+    return x;
   }
 };
