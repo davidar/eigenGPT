@@ -103,18 +103,20 @@ public:
 
   inline size_t size() const { return meta.size(); }
 
+  float* data(std::string name) const {
+    return (float*) &storage[meta.at(name).data_offsets.first];
+  }
+
   Eigen::Map<MatrixXfRowMajor> matrix(std::string name) const {
-    const metadata_t m = meta.at(name);
-    assert(m.shape.size() == 2);
-    float *data = (float *)&storage[m.data_offsets.first];
-    return Eigen::Map<MatrixXfRowMajor>(data, m.shape[0], m.shape[1]);
+    const std::vector<size_t>& shape = meta.at(name).shape;
+    assert(shape.size() == 2);
+    return Eigen::Map<MatrixXfRowMajor>(data(name), shape[0], shape[1]);
   }
 
   Eigen::Map<Eigen::VectorXf> vector(std::string name) const {
-    const metadata_t m = meta.at(name);
-    assert(m.shape.size() == 1);
-    float *data = (float *)&storage[m.data_offsets.first];
-    return Eigen::Map<Eigen::VectorXf>(data, m.shape[0]);
+    const std::vector<size_t>& shape = meta.at(name).shape;
+    assert(shape.size() == 1);
+    return Eigen::Map<Eigen::VectorXf>(data(name), shape[0]);
   }
 };
 } // namespace safetensors

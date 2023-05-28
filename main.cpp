@@ -37,9 +37,10 @@ int main() {
     std::cerr << tokeniser(std::vector<int>{token}) << std::flush;
     Embedding x = wte.row(token) + wpe.row(posn);
     for (auto &block : blocks) {
-      block(x);
+      block(x.data());
     }
-    x = TransformerBlock::norm(x);
+    x.array() -= x.mean();
+    x.normalize();
     x.array() *= w_ln.array();
     x += b_ln;
     auto logits = wte * x;
