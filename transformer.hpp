@@ -21,87 +21,38 @@ using Embedding = Vector<float, n_embd>;
 class TransformerBlock {
 public:
   float kv[n_ctx][2 * n_embd];
-  int n_seq;
+  int n_seq = 0;
 
-  float w_attn1[3 * n_embd][n_embd];
+  float w_attn1[n_embd][3 * n_embd];
   float b_attn1[3 * n_embd];
 
   float w_attn2[n_embd][n_embd];
   float b_attn2[n_embd];
 
-  float w_mlp1[4 * n_embd][n_embd];
+  float w_mlp1[n_embd][4 * n_embd];
   float b_mlp1[4 * n_embd];
 
-  float w_mlp2[n_embd][4 * n_embd];
+  float w_mlp2[4 * n_embd][n_embd];
   float b_mlp2[n_embd];
 
+  float w_ln1[n_embd];
+  float b_ln1[n_embd];
+  float w_ln2[n_embd];
+  float b_ln2[n_embd];
+
   TransformerBlock(safetensors::safetensors_t param, int b) {
-    n_seq = 0;
-
-    float *raw_data;
-
-    // Copy w_attn1
-    raw_data = param.data(format("h.{}.attn.c_attn.weight", b));
-    for (int i = 0; i < 3 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_attn1[i][j] = raw_data[j * (3 * n_embd) + i]; // Note the transpose
-
-    // Copy b_attn1
-    raw_data = param.data(format("h.{}.attn.c_attn.bias", b));
-    memcpy(b_attn1, raw_data, sizeof(b_attn1));
-
-    // Copy w_attn2
-    raw_data = param.data(format("h.{}.attn.c_proj.weight", b));
-    for (int i = 0; i < n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_attn2[i][j] = raw_data[j * n_embd + i]; // Note the transpose
-
-    // Copy b_attn2
-    raw_data = param.data(format("h.{}.attn.c_proj.bias", b));
-    memcpy(b_attn2, raw_data, sizeof(b_attn2));
-
-    // Copy w_mlp1
-    raw_data = param.data(format("h.{}.mlp.c_fc.weight", b));
-    for (int i = 0; i < 4 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_mlp1[i][j] = raw_data[j * (4 * n_embd) + i]; // Note the transpose
-
-    // Copy b_mlp1
-    raw_data = param.data(format("h.{}.mlp.c_fc.bias", b));
-    memcpy(b_mlp1, raw_data, sizeof(b_mlp1));
-
-    // Copy w_mlp2
-    raw_data = param.data(format("h.{}.mlp.c_proj.weight", b));
-    for (int i = 0; i < n_embd; i++)
-      for (int j = 0; j < 4 * n_embd; j++)
-        w_mlp2[i][j] = raw_data[j * n_embd + i]; // Note the transpose
-
-    // Copy b_mlp2
-    raw_data = param.data(format("h.{}.mlp.c_proj.bias", b));
-    memcpy(b_mlp2, raw_data, sizeof(b_mlp2));
-
-    // bake the normalisation constants into the weights
-    raw_data = param.data(format("h.{}.ln_1.bias", b));
-    for (int i = 0; i < 3 * n_embd; i++) {
-      for (int j = 0; j < n_embd; j++)
-        b_attn1[i] += w_attn1[i][j] * raw_data[j];
-    }
-
-    raw_data = param.data(format("h.{}.ln_1.weight", b));
-    for (int i = 0; i < 3 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_attn1[i][j] *= raw_data[j] * sqrt(n_embd);
-
-    raw_data = param.data(format("h.{}.ln_2.bias", b));
-    for (int i = 0; i < 4 * n_embd; i++) {
-      for (int j = 0; j < n_embd; j++)
-        b_mlp1[i] += w_mlp1[i][j] * raw_data[j];
-    }
-
-    raw_data = param.data(format("h.{}.ln_2.weight", b));
-    for (int i = 0; i < 4 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_mlp1[i][j] *= raw_data[j] * sqrt(n_embd);
+    memcpy(w_attn1, param.data(format("h.{}.attn.c_attn.weight", b)), sizeof(w_attn1));
+    memcpy(b_attn1, param.data(format("h.{}.attn.c_attn.bias", b)), sizeof(b_attn1));
+    memcpy(w_attn2, param.data(format("h.{}.attn.c_proj.weight", b)), sizeof(w_attn2));
+    memcpy(b_attn2, param.data(format("h.{}.attn.c_proj.bias", b)), sizeof(b_attn2));
+    memcpy(w_mlp1, param.data(format("h.{}.mlp.c_fc.weight", b)), sizeof(w_mlp1));
+    memcpy(b_mlp1, param.data(format("h.{}.mlp.c_fc.bias", b)), sizeof(b_mlp1));
+    memcpy(w_mlp2, param.data(format("h.{}.mlp.c_proj.weight", b)), sizeof(w_mlp2));
+    memcpy(b_mlp2, param.data(format("h.{}.mlp.c_proj.bias", b)), sizeof(b_mlp2));
+    memcpy(b_ln1, param.data(format("h.{}.ln_1.bias", b)), sizeof(b_ln1));
+    memcpy(w_ln1, param.data(format("h.{}.ln_1.weight", b)), sizeof(w_ln1));
+    memcpy(b_ln2, param.data(format("h.{}.ln_2.bias", b)), sizeof(b_ln2));
+    memcpy(w_ln2, param.data(format("h.{}.ln_2.weight", b)), sizeof(w_ln2));
   }
 
   static void norm(float x[n_embd]) {
@@ -128,7 +79,7 @@ public:
     float qkv_x[3 * n_embd] = {0};
     for (int i = 0; i < 3 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        qkv_x[i] += w_attn1[i][j] * norm_x[j];
+        qkv_x[i] += w_attn1[j][i] * (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
       }
       qkv_x[i] += b_attn1[i];
       if (i >= n_embd)
@@ -155,7 +106,7 @@ public:
 
     for (int i = 0; i < n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        x[i] += w_attn2[i][j] * attn[j] / asum[j / D];
+        x[i] += w_attn2[j][i] * attn[j] / asum[j / D];
       }
       x[i] += b_attn2[i];
     }
@@ -167,7 +118,7 @@ public:
 
     for (int i = 0; i < 4 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        h[i] += w_mlp1[i][j] * norm_x[j];
+        h[i] += w_mlp1[j][i] * (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
       }
       h[i] += b_mlp1[i];
       h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;
@@ -175,7 +126,7 @@ public:
 
     for (int i = 0; i < n_embd; i++) {
       for (int j = 0; j < 4 * n_embd; j++) {
-        x[i] += w_mlp2[i][j] * h[j];
+        x[i] += w_mlp2[j][i] * h[j];
       }
       x[i] += b_mlp2[i];
     }
