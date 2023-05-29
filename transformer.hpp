@@ -22,38 +22,22 @@ class TransformerBlock {
 public:
   float kv[n_ctx][2 * n_embd];
   int n_seq = 0;
+  float *w_attn1, *b_attn1, *w_attn2, *b_attn2, *w_mlp1, *b_mlp1, *w_mlp2,
+      *b_mlp2, *w_ln1, *b_ln1, *w_ln2, *b_ln2;
 
-  float w_attn1[n_embd * 3 * n_embd];
-  float b_attn1[3 * n_embd];
-
-  float w_attn2[n_embd * n_embd];
-  float b_attn2[n_embd];
-
-  float w_mlp1[n_embd * 4 * n_embd];
-  float b_mlp1[4 * n_embd];
-
-  float w_mlp2[4 * n_embd * n_embd];
-  float b_mlp2[n_embd];
-
-  float w_ln1[n_embd];
-  float b_ln1[n_embd];
-  float w_ln2[n_embd];
-  float b_ln2[n_embd];
-
-  TransformerBlock(safetensors::safetensors_t param, int b) {
-    memcpy(w_attn1, param.data(format("h.{}.attn.c_attn.weight", b)), sizeof(w_attn1));
-    memcpy(b_attn1, param.data(format("h.{}.attn.c_attn.bias", b)), sizeof(b_attn1));
-    memcpy(w_attn2, param.data(format("h.{}.attn.c_proj.weight", b)), sizeof(w_attn2));
-    memcpy(b_attn2, param.data(format("h.{}.attn.c_proj.bias", b)), sizeof(b_attn2));
-    memcpy(w_mlp1, param.data(format("h.{}.mlp.c_fc.weight", b)), sizeof(w_mlp1));
-    memcpy(b_mlp1, param.data(format("h.{}.mlp.c_fc.bias", b)), sizeof(b_mlp1));
-    memcpy(w_mlp2, param.data(format("h.{}.mlp.c_proj.weight", b)), sizeof(w_mlp2));
-    memcpy(b_mlp2, param.data(format("h.{}.mlp.c_proj.bias", b)), sizeof(b_mlp2));
-    memcpy(b_ln1, param.data(format("h.{}.ln_1.bias", b)), sizeof(b_ln1));
-    memcpy(w_ln1, param.data(format("h.{}.ln_1.weight", b)), sizeof(w_ln1));
-    memcpy(b_ln2, param.data(format("h.{}.ln_2.bias", b)), sizeof(b_ln2));
-    memcpy(w_ln2, param.data(format("h.{}.ln_2.weight", b)), sizeof(w_ln2));
-  }
+  TransformerBlock(safetensors::safetensors_t param, int b)
+      : w_attn1(param.data(format("h.{}.attn.c_attn.weight", b))),
+        b_attn1(param.data(format("h.{}.attn.c_attn.bias", b))),
+        w_attn2(param.data(format("h.{}.attn.c_proj.weight", b))),
+        b_attn2(param.data(format("h.{}.attn.c_proj.bias", b))),
+        w_mlp1(param.data(format("h.{}.mlp.c_fc.weight", b))),
+        b_mlp1(param.data(format("h.{}.mlp.c_fc.bias", b))),
+        w_mlp2(param.data(format("h.{}.mlp.c_proj.weight", b))),
+        b_mlp2(param.data(format("h.{}.mlp.c_proj.bias", b))),
+        b_ln1(param.data(format("h.{}.ln_1.bias", b))),
+        w_ln1(param.data(format("h.{}.ln_1.weight", b))),
+        b_ln2(param.data(format("h.{}.ln_2.bias", b))),
+        w_ln2(param.data(format("h.{}.ln_2.weight", b))) {}
 
   static void norm(float x[n_embd]) {
     float sum = 0;
@@ -79,7 +63,8 @@ public:
     float qkv_x[3 * n_embd] = {0};
     for (int i = 0; i < 3 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        qkv_x[i] += w_attn1[j * (3 * n_embd) + i] * (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
+        qkv_x[i] += w_attn1[j * (3 * n_embd) + i] *
+                    (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
       }
       qkv_x[i] += b_attn1[i];
       if (i >= n_embd)
@@ -118,7 +103,8 @@ public:
 
     for (int i = 0; i < 4 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        h[i] += w_mlp1[j * (4 * n_embd) + i] * (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
+        h[i] += w_mlp1[j * (4 * n_embd) + i] *
+                (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
       }
       h[i] += b_mlp1[i];
       h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;

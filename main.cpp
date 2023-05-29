@@ -16,7 +16,6 @@ int main() {
 
   std::vector<TransformerBlock> blocks;
   for (int b = 0; b < n_layer; b++) {
-    std::cerr << 100 * b / n_layer << "%\r" << std::flush;
     blocks.emplace_back(param, b);
   }
 
