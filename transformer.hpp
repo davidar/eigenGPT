@@ -21,7 +21,7 @@ using Embedding = Vector<float, n_embd>;
 class TransformerBlock {
 public:
   float kv[n_ctx][2 * n_embd];
-  int kv_size;
+  int n_seq;
 
   float w_attn1[3 * n_embd][n_embd];
   float b_attn1[3 * n_embd];
@@ -36,7 +36,7 @@ public:
   float b_mlp2[n_embd];
 
   TransformerBlock(safetensors::safetensors_t param, int b) {
-    kv_size = 0;
+    n_seq = 0;
 
     float *raw_data;
 
@@ -81,33 +81,6 @@ public:
     memcpy(b_mlp2, raw_data, sizeof(b_mlp2));
 
     // bake the normalisation constants into the weights
-    /*
-    raw_data = param.data(format("h.{}.ln_1.bias", b));
-    for (int i = 0; i < 3 * n_embd; i++) {
-      float sum = 0.0f;
-      for (int j = 0; j < n_embd; j++)
-        sum += w_attn1[i][j] * raw_data[j];
-      b_attn1[i] += sum;
-    }
-
-    raw_data = param.data(format("h.{}.ln_1.weight", b));
-    for (int i = 0; i < 3 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_attn1[i][j] *= raw_data[j] * sqrt(n_embd);
-
-    raw_data = param.data(format("h.{}.ln_2.bias", b));
-    for (int i = 0; i < 4 * n_embd; i++) {
-      float sum = 0.0f;
-      for (int j = 0; j < n_embd; j++)
-        sum += w_mlp1[i][j] * raw_data[j];
-      b_mlp1[i] += sum;
-    }
-
-    raw_data = param.data(format("h.{}.ln_2.weight", b));
-    for (int i = 0; i < 4 * n_embd; i++)
-      for (int j = 0; j < n_embd; j++)
-        w_mlp1[i][j] *= raw_data[j] * sqrt(n_embd);
-    */
     raw_data = param.data(format("h.{}.ln_1.bias", b));
     for (int i = 0; i < 3 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++)
@@ -151,63 +124,38 @@ public:
     memcpy(norm_x, x, sizeof(float) * n_embd);
     norm(norm_x);
 
+    // update kv cache
     float qkv_x[3 * n_embd] = {0};
     for (int i = 0; i < 3 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
         qkv_x[i] += w_attn1[i][j] * norm_x[j];
       }
       qkv_x[i] += b_attn1[i];
+      if (i >= n_embd)
+        kv[n_seq][i - n_embd] = qkv_x[i];
     }
-
-    // update kv cache
-    for (int i = 0; i < 2 * n_embd; i++) {
-      kv[kv_size][i] = qkv_x[n_embd + i];
-    }
-    kv_size += 1;
+    n_seq += 1;
 
     // attention
     float attn[n_embd] = {0};
-    for (int i = 0; i < n_head; i++) {
-      float q[D] = {0};
-      float a[n_ctx] = {0};
-      float a_sum = 0.0;
-
-      for (int j = 0; j < D; j++) {
-        q[j] = qkv_x[j + D * i];
-      }
-
-      float k[n_ctx][D] = {0};
-      float v[n_ctx][D] = {0};
-
-      for (int r = 0; r < kv_size; r++) {
-        for (int c = 0; c < D; c++) {
-          k[r][c] = kv[r][c + D * i];
-          v[r][c] = kv[r][c + D * i + n_embd];
+    float asum[n_head] = {0};
+    for (int head = 0; head < n_head; head++) {
+      for (int posn = 0; posn < n_seq; posn++) {
+        float a = 0;
+        for (int d = 0; d < D; d++) {
+          a += kv[posn][d + D * head] * qkv_x[d + D * head];
         }
-      }
-
-      for (int j = 0; j < kv_size; j++) {
-        for (int l = 0; l < D; l++) {
-          a[j] += k[j][l] * q[l];
+        a = std::exp(a / sqrt(D));
+        for (int d = 0; d < D; d++) {
+          attn[d + D * head] += kv[posn][d + D * head + n_embd] * a;
         }
-        a[j] = std::exp(a[j] / sqrt(D));
-        a_sum += a[j];
-      }
-
-      for (int j = 0; j < kv_size; j++) {
-        a[j] /= a_sum;
-      }
-
-      for (int j = 0; j < D; j++) {
-        for (int l = 0; l < kv_size; l++) {
-          attn[j + D * i] += v[l][j] * a[l];
-        }
+        asum[head] += a;
       }
     }
 
     for (int i = 0; i < n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        x[i] += w_attn2[i][j] * attn[j];
+        x[i] += w_attn2[i][j] * attn[j] / asum[j / D];
       }
       x[i] += b_attn2[i];
     }
@@ -222,7 +170,7 @@ public:
         h[i] += w_mlp1[i][j] * norm_x[j];
       }
       h[i] += b_mlp1[i];
-      h[i] = h[i] * (1 + std::erf(h[i] / sqrt(2))) / 2;
+      h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;
     }
 
     for (int i = 0; i < n_embd; i++) {
