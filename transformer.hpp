@@ -1,12 +1,7 @@
-#define EIGEN_STACK_ALLOCATION_LIMIT 0
-
-#include <Eigen/Dense>
 #include <fmt/core.h>
-#include <unsupported/Eigen/SpecialFunctions>
 
 #include "safetensors.hpp"
 
-using namespace Eigen;
 using fmt::format;
 
 constexpr size_t n_ctx = 1024;
@@ -15,8 +10,6 @@ constexpr size_t n_head = 12;
 constexpr size_t n_layer = 12;
 constexpr size_t n_vocab = 50257;
 constexpr size_t D = n_embd / n_head;
-
-using Embedding = Vector<float, n_embd>;
 
 class TransformerBlock {
 public:
