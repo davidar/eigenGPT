@@ -10,10 +10,9 @@ namespace fs = std::filesystem;
 int main() {
   std::ifstream merge("../gpt2-tokenizer/tokenizer/assets/merges.txt");
   std::ifstream vocab("../gpt2-tokenizer/tokenizer/assets/vocab.txt");
-  std::ifstream model("../gpt2/model.safetensors", std::ios::binary);
   assert(merge.is_open() && vocab.is_open() && model.is_open());
   Tokeniser tokeniser(merge, vocab);
-  auto param = safetensors::safetensors_t(model);
+  safetensors::safetensors_t param;
 
   std::vector<TransformerBlock> blocks;
   for (int b = 0; b < n_layer; b++) {

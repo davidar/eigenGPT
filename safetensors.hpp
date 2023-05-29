@@ -11,6 +11,9 @@ using json = nlohmann::json;
 using MatrixXfRowMajor =
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
+// http://gareus.org/wiki/embedding_resources_in_executables
+extern const unsigned char _binary_model_safetensors_start[];
+
 namespace safetensors {
 enum dtype_t {
   /// Boolean type
@@ -67,29 +70,21 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(metadata_t, dtype, shape, data_offsets)
 class safetensors_t {
 public:
   std::unordered_map<std::string, metadata_t> meta;
-  std::vector<char> storage;
+  const unsigned char *storage;
 
 public:
-  safetensors_t(std::basic_istream<char> &in) {
-    uint64_t header_size = 0;
-
-    // todo: handle exception
-    in.read(reinterpret_cast<char *>(&header_size), sizeof header_size);
+  safetensors_t() {
+    uint64_t header_size =
+        *reinterpret_cast<const uint64_t *>(_binary_model_safetensors_start);
 
     std::vector<char> meta_block(header_size);
-    in.read(meta_block.data(), static_cast<std::streamsize>(header_size));
+    memcpy(meta_block.data(),
+           _binary_model_safetensors_start + sizeof header_size,
+           static_cast<size_t>(header_size));
     const auto metadatas = json::parse(meta_block);
 
-    // How many bytes remaining to pre-allocate the storage tensor
-    in.seekg(0, std::ios::end);
-    std::streamsize f_size = in.tellg();
-    in.seekg(8 + header_size, std::ios::beg);
-    const auto tensors_size = f_size - 8 - header_size;
-
-    storage.resize(tensors_size);
-
-    // Read the remaining content
-    in.read(storage.data(), static_cast<std::streamsize>(tensors_size));
+    storage =
+        _binary_model_safetensors_start + sizeof header_size + header_size;
 
     // Populate the meta lookup table
     if (metadatas.is_object()) {
@@ -103,18 +98,18 @@ public:
 
   inline size_t size() const { return meta.size(); }
 
-  float* data(std::string name) const {
-    return (float*) &storage[meta.at(name).data_offsets.first];
+  float *data(std::string name) const {
+    return (float *)&storage[meta.at(name).data_offsets.first];
   }
 
   Eigen::Map<MatrixXfRowMajor> matrix(std::string name) const {
-    const std::vector<size_t>& shape = meta.at(name).shape;
+    const std::vector<size_t> &shape = meta.at(name).shape;
     assert(shape.size() == 2);
     return Eigen::Map<MatrixXfRowMajor>(data(name), shape[0], shape[1]);
   }
 
   Eigen::Map<Eigen::VectorXf> vector(std::string name) const {
-    const std::vector<size_t>& shape = meta.at(name).shape;
+    const std::vector<size_t> &shape = meta.at(name).shape;
     assert(shape.size() == 1);
     return Eigen::Map<Eigen::VectorXf>(data(name), shape[0]);
   }
