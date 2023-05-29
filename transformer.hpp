@@ -23,16 +23,16 @@ public:
   float kv[n_ctx][2 * n_embd];
   int n_seq = 0;
 
-  float w_attn1[n_embd][3 * n_embd];
+  float w_attn1[n_embd * 3 * n_embd];
   float b_attn1[3 * n_embd];
 
-  float w_attn2[n_embd][n_embd];
+  float w_attn2[n_embd * n_embd];
   float b_attn2[n_embd];
 
-  float w_mlp1[n_embd][4 * n_embd];
+  float w_mlp1[n_embd * 4 * n_embd];
   float b_mlp1[4 * n_embd];
 
-  float w_mlp2[4 * n_embd][n_embd];
+  float w_mlp2[4 * n_embd * n_embd];
   float b_mlp2[n_embd];
 
   float w_ln1[n_embd];
@@ -79,7 +79,7 @@ public:
     float qkv_x[3 * n_embd] = {0};
     for (int i = 0; i < 3 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        qkv_x[i] += w_attn1[j][i] * (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
+        qkv_x[i] += w_attn1[j * (3 * n_embd) + i] * (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
       }
       qkv_x[i] += b_attn1[i];
       if (i >= n_embd)
@@ -106,7 +106,7 @@ public:
 
     for (int i = 0; i < n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        x[i] += w_attn2[j][i] * attn[j] / asum[j / D];
+        x[i] += w_attn2[j * n_embd + i] * attn[j] / asum[j / D];
       }
       x[i] += b_attn2[i];
     }
@@ -118,7 +118,7 @@ public:
 
     for (int i = 0; i < 4 * n_embd; i++) {
       for (int j = 0; j < n_embd; j++) {
-        h[i] += w_mlp1[j][i] * (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
+        h[i] += w_mlp1[j * (4 * n_embd) + i] * (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
       }
       h[i] += b_mlp1[i];
       h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;
@@ -126,7 +126,7 @@ public:
 
     for (int i = 0; i < n_embd; i++) {
       for (int j = 0; j < 4 * n_embd; j++) {
-        x[i] += w_mlp2[j][i] * h[j];
+        x[i] += w_mlp2[j * n_embd + i] * h[j];
       }
       x[i] += b_mlp2[i];
     }
