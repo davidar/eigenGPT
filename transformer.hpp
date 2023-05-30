@@ -50,15 +50,14 @@ public:
     norm(norm_x);
 
     // update kv cache
-    float qkv_x[3 * n_embd];
+    float q[n_embd];
     FOR_EMBED(i, 3) {
-      qkv_x[i] = b_attn1[i];
+      float *qkv = i < n_embd ? &q[i] : &kv[n_seq][i - n_embd];
+      *qkv = b_attn1[i];
       FOR_EMBED(j, 1) {
-        qkv_x[i] += w_attn1[j * (3 * n_embd) + i] *
-                    (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
+        *qkv += w_attn1[j * (3 * n_embd) + i] *
+                (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
       }
-      if (i >= n_embd)
-        kv[n_seq][i - n_embd] = qkv_x[i];
     }
     n_seq++;
 
@@ -69,13 +68,12 @@ public:
       for (int posn = 0; posn < n_seq; posn++) {
         float a = 0;
         for (int d = D * head; d < D + D * head; d++) {
-          a += kv[posn][d] * qkv_x[d];
+          a += kv[posn][d] * q[d];
         }
-        a = std::exp(a / sqrt(D));
+        asum[head] += a = std::exp(a / sqrt(D));
         for (int d = D * head; d < D + D * head; d++) {
           attn[d] += kv[posn][d + n_embd] * a;
         }
-        asum[head] += a;
       }
     }
 
@@ -84,11 +82,11 @@ public:
       x[i] += b_attn2[i];
     }
 
-    // mlp
-    float h[4 * n_embd];
     memcpy(norm_x, x, sizeof(float) * n_embd);
     norm(norm_x);
 
+    // mlp
+    float h[4 * n_embd];
     FOR_EMBED(i, 4) {
       h[i] = b_mlp1[i];
       FOR_EMBED(j, 1) {

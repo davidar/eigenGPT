@@ -23,7 +23,7 @@ int main() {
 
   auto wte = param.matrix("wte.weight");
   auto wpe = param.matrix("wpe.weight");
-  auto w_ln = param.vector("ln_f.weight") * sqrt(n_embd);
+  auto w_ln = param.vector("ln_f.weight");
   auto b_ln = param.vector("ln_f.bias");
 
   std::vector<int> prompt =
@@ -41,7 +41,7 @@ int main() {
     }
     x.array() -= x.mean();
     x.normalize();
-    x.array() *= w_ln.array();
+    x.array() *= w_ln.array() * sqrt(n_embd);
     x += b_ln;
     auto logits = wte * x;
     logits.maxCoeff(&token);
