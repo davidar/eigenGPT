@@ -14,12 +14,12 @@ constexpr size_t D = n_embd / n_head;
 #define FOR_EMBED(var, mul) for (int var = 0; var < mul * n_embd; var++)
 
 class TransformerBlock {
-public:
   float kv[n_ctx][2 * n_embd];
   int n_seq = 0;
   float *w_attn1, *b_attn1, *w_attn2, *b_attn2, *w_mlp1, *b_mlp1, *w_mlp2,
       *b_mlp2, *w_ln1, *b_ln1, *w_ln2, *b_ln2;
 
+public:
   TransformerBlock(safetensors::safetensors_t param, int b)
       : w_attn1(param.data(format("h.{}.attn.c_attn.weight", b))),
         b_attn1(param.data(format("h.{}.attn.c_attn.bias", b))),
@@ -50,7 +50,7 @@ public:
       *qkv = b_attn1[i];
       FOR_EMBED(j, 1) {
         *qkv += w_attn1[j * (3 * n_embd) + i] *
-                (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j] / sqrt(sqnorm));
+                (b_ln1[j] + w_ln1[j] * norm_x[j] / sqrt(sqnorm / n_embd));
       }
     }
     n_seq++;
@@ -90,7 +90,7 @@ public:
       h[i] = b_mlp1[i];
       FOR_EMBED(j, 1) {
         h[i] += w_mlp1[j * (4 * n_embd) + i] *
-                (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j] / sqrt(sqnorm));
+                (b_ln2[j] + w_ln2[j] * norm_x[j] / sqrt(sqnorm / n_embd));
       }
       h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;
     }
@@ -99,5 +99,46 @@ public:
       FOR_EMBED(j, 4) x[i] += w_mlp2[j * n_embd + i] * h[j];
       x[i] += b_mlp2[i];
     }
+  }
+};
+
+class Transformer {
+  float *wte, *wpe, *w_ln, *b_ln;
+  TransformerBlock *block[n_layer];
+
+public:
+  Transformer(safetensors::safetensors_t param)
+      : wte(param.data("wte.weight")), wpe(param.data("wpe.weight")),
+        w_ln(param.data("ln_f.weight")), b_ln(param.data("ln_f.bias")) {
+    for (int i = 0; i < n_layer; i++) {
+      block[i] = new TransformerBlock(param, i);
+    }
+  }
+
+  int operator()(int token, int posn) {
+    float x[n_embd];
+    FOR_EMBED(i, 1) x[i] = wte[token * n_embd + i] + wpe[posn * n_embd + i];
+    for (int i = 0; i < n_layer; i++) {
+      (*block[i])(x);
+    }
+
+    float sum = 0, sqnorm = 0;
+    FOR_EMBED(i, 1) sum += x[i];
+    FOR_EMBED(i, 1) {
+      x[i] -= sum / n_embd;
+      sqnorm += x[i] * x[i];
+    }
+    FOR_EMBED(i, 1) x[i] = b_ln[i] + w_ln[i] * x[i] / sqrt(sqnorm / n_embd);
+    float max_logit;
+    int max_token;
+    for (int token = 0; token < n_vocab; token++) {
+      float logit = 0;
+      FOR_EMBED(i, 1) logit += wte[token * n_embd + i] * x[i];
+      if (token == 0 || logit > max_logit) {
+        max_logit = logit;
+        max_token = token;
+      }
+    }
+    return max_token;
   }
 };

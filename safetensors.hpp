@@ -3,13 +3,9 @@
 #ifndef SAFETENSORS_H
 #define SAFETENSORS_H
 
-#include <Eigen/Dense>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
-
-using MatrixXfRowMajor =
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 // http://gareus.org/wiki/embedding_resources_in_executables
 extern const unsigned char _binary_model_safetensors_start[];
@@ -100,18 +96,6 @@ public:
 
   float *data(std::string name) const {
     return (float *)&storage[meta.at(name).data_offsets.first];
-  }
-
-  Eigen::Map<MatrixXfRowMajor> matrix(std::string name) const {
-    const std::vector<size_t> &shape = meta.at(name).shape;
-    assert(shape.size() == 2);
-    return Eigen::Map<MatrixXfRowMajor>(data(name), shape[0], shape[1]);
-  }
-
-  Eigen::Map<Eigen::VectorXf> vector(std::string name) const {
-    const std::vector<size_t> &shape = meta.at(name).shape;
-    assert(shape.size() == 1);
-    return Eigen::Map<Eigen::VectorXf>(data(name), shape[0]);
   }
 };
 } // namespace safetensors
