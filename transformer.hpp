@@ -1,6 +1,7 @@
 #include <fmt/core.h>
 
 #include "safetensors.hpp"
+#include "vocab.h"
 
 using fmt::format;
 
@@ -8,7 +9,6 @@ constexpr size_t n_ctx = 1024;
 constexpr size_t n_embd = 768;
 constexpr size_t n_head = 12;
 constexpr size_t n_layer = 12;
-constexpr size_t n_vocab = 50257;
 constexpr size_t D = n_embd / n_head;
 
 #define FOR_EMBED(var, mul) for (int var = 0; var < mul * n_embd; var++)

@@ -6,9 +6,9 @@
 
 int main() {
   std::ifstream merge("../gpt2-tokenizer/tokenizer/assets/merges.txt");
-  std::ifstream vocab("../gpt2-tokenizer/tokenizer/assets/vocab.txt");
-  assert(merge.is_open() && vocab.is_open() && model.is_open());
-  Tokeniser tokeniser(merge, vocab);
+  std::ifstream vocab_txt("../gpt2-tokenizer/tokenizer/assets/vocab.txt");
+  assert(merge.is_open() && vocab_txt.is_open());
+  Tokeniser tokeniser(merge, vocab_txt);
   safetensors::safetensors_t param;
   Transformer transformer(param);
 
@@ -20,7 +20,7 @@ int main() {
   assert(total < n_ctx);
   for (int posn = 0; posn < total; posn++) {
     int token = tokens[posn];
-    std::cerr << tokeniser(std::vector<int>{token}) << std::flush;
+    std::cerr << vocab[token] << std::flush;
     token = transformer(token, posn);
     if (posn + 1 >= tokens.size()) {
       tokens.push_back(token);
