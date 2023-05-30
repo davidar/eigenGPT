@@ -34,20 +34,14 @@ public:
         b_ln2(param.data(format("h.{}.ln_2.bias", b))),
         w_ln2(param.data(format("h.{}.ln_2.weight", b))) {}
 
-  static void norm(float x[n_embd]) {
-    float mean = 0;
-    FOR_EMBED(i, 1) mean += x[i] / n_embd;
-    FOR_EMBED(i, 1) x[i] -= mean;
-    float norm = 0;
-    FOR_EMBED(i, 1) norm += x[i] * x[i];
-    norm = sqrt(norm);
-    FOR_EMBED(i, 1) x[i] /= norm;
-  }
-
   void operator()(float x[n_embd]) {
     float norm_x[n_embd];
-    memcpy(norm_x, x, sizeof(float) * n_embd);
-    norm(norm_x);
+    float sum = 0, sqnorm = 0;
+    FOR_EMBED(i, 1) sum += x[i];
+    FOR_EMBED(i, 1) {
+      norm_x[i] = x[i] - sum / n_embd;
+      sqnorm += norm_x[i] * norm_x[i];
+    }
 
     // update kv cache
     float q[n_embd];
@@ -56,7 +50,7 @@ public:
       *qkv = b_attn1[i];
       FOR_EMBED(j, 1) {
         *qkv += w_attn1[j * (3 * n_embd) + i] *
-                (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j]);
+                (b_ln1[j] + w_ln1[j] * sqrt(n_embd) * norm_x[j] / sqrt(sqnorm));
       }
     }
     n_seq++;
@@ -78,12 +72,17 @@ public:
     }
 
     FOR_EMBED(i, 1) {
-      FOR_EMBED(j, 1) x[i] += w_attn2[j * n_embd + i] * attn[j] / asum[j / D];
-      x[i] += b_attn2[i];
+      float r = b_attn2[i];
+      FOR_EMBED(j, 1) r += w_attn2[j * n_embd + i] * attn[j] / asum[j / D];
+      x[i] += r;
+      sum += r;
     }
 
-    memcpy(norm_x, x, sizeof(float) * n_embd);
-    norm(norm_x);
+    sqnorm = 0;
+    FOR_EMBED(i, 1) {
+      norm_x[i] = x[i] - sum / n_embd;
+      sqnorm += norm_x[i] * norm_x[i];
+    }
 
     // mlp
     float h[4 * n_embd];
@@ -91,7 +90,7 @@ public:
       h[i] = b_mlp1[i];
       FOR_EMBED(j, 1) {
         h[i] += w_mlp1[j * (4 * n_embd) + i] *
-                (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j]);
+                (b_ln2[j] + w_ln2[j] * sqrt(n_embd) * norm_x[j] / sqrt(sqnorm));
       }
       h[i] *= (1 + std::erf(h[i] / sqrt(2))) / 2;
     }
