@@ -95,8 +95,9 @@ public:
   inline size_t size() const { return meta.size(); }
 
   float *data(std::string name) const {
-    return (float *)&storage[meta.at(name).data_offsets.first];
+    return data(meta.at(name).data_offsets.first);
   }
+  float *data(size_t offset) const { return (float *)&storage[offset]; }
 };
 } // namespace safetensors
 

@@ -1,5 +1,6 @@
 #include <fmt/core.h>
 
+#include "model_offsets.h"
 #include "safetensors.hpp"
 #include "vocab.h"
 
@@ -21,18 +22,18 @@ class TransformerBlock {
 
 public:
   TransformerBlock(safetensors::safetensors_t param, int b)
-      : w_attn1(param.data(format("h.{}.attn.c_attn.weight", b))),
-        b_attn1(param.data(format("h.{}.attn.c_attn.bias", b))),
-        w_attn2(param.data(format("h.{}.attn.c_proj.weight", b))),
-        b_attn2(param.data(format("h.{}.attn.c_proj.bias", b))),
-        w_mlp1(param.data(format("h.{}.mlp.c_fc.weight", b))),
-        b_mlp1(param.data(format("h.{}.mlp.c_fc.bias", b))),
-        w_mlp2(param.data(format("h.{}.mlp.c_proj.weight", b))),
-        b_mlp2(param.data(format("h.{}.mlp.c_proj.bias", b))),
-        b_ln1(param.data(format("h.{}.ln_1.bias", b))),
-        w_ln1(param.data(format("h.{}.ln_1.weight", b))),
-        b_ln2(param.data(format("h.{}.ln_2.bias", b))),
-        w_ln2(param.data(format("h.{}.ln_2.weight", b))) {}
+      : w_attn1(param.data(block_offsets[b][0])),
+        b_attn1(param.data(block_offsets[b][1])),
+        w_attn2(param.data(block_offsets[b][2])),
+        b_attn2(param.data(block_offsets[b][3])),
+        w_ln1(param.data(block_offsets[b][4])),
+        b_ln1(param.data(block_offsets[b][5])),
+        w_mlp1(param.data(block_offsets[b][6])),
+        b_mlp1(param.data(block_offsets[b][7])),
+        w_mlp2(param.data(block_offsets[b][8])),
+        b_mlp2(param.data(block_offsets[b][9])),
+        w_ln2(param.data(block_offsets[b][10])),
+        b_ln2(param.data(block_offsets[b][11])) {}
 
   void operator()(float x[n_embd]) {
     float norm_x[n_embd];
@@ -108,8 +109,8 @@ class Transformer {
 
 public:
   Transformer(safetensors::safetensors_t param)
-      : wte(param.data("wte.weight")), wpe(param.data("wpe.weight")),
-        w_ln(param.data("ln_f.weight")), b_ln(param.data("ln_f.bias")) {
+      : wte(param.data(wte_offset)), wpe(param.data(wpe_offset)),
+        w_ln(param.data(w_ln_offset)), b_ln(param.data(b_ln_offset)) {
     for (int i = 0; i < n_layer; i++) {
       block[i] = new TransformerBlock(param, i);
     }
