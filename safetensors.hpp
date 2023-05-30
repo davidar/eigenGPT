@@ -82,6 +82,8 @@ public:
     storage =
         _binary_model_safetensors_start + sizeof header_size + header_size;
 
+    // std::cerr << "header_size: " << header_size << std::endl;
+
     // Populate the meta lookup table
     if (metadatas.is_object()) {
       for (auto &[key, value] : metadatas.items()) {

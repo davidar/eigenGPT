@@ -1,3 +1,10 @@
+extern const unsigned char _binary_model_safetensors_start[];
+
+int header_size = 14283;
+
+const unsigned char *storage =
+    _binary_model_safetensors_start + sizeof(uint64_t) + header_size;
+
 int wte_offset = 287209472; // wte.weight
 int wpe_offset = 267533312; // wpe.weight
 int w_ln_offset = 9458688;  // ln_f.weight

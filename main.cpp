@@ -9,8 +9,7 @@ int main() {
   std::ifstream vocab_txt("../gpt2-tokenizer/tokenizer/assets/vocab.txt");
   assert(merge.is_open() && vocab_txt.is_open());
   Tokeniser tokeniser(merge, vocab_txt);
-  safetensors::safetensors_t param;
-  Transformer transformer(param);
+  Transformer transformer;
 
   /*
   auto print_offset = [&](std::string name) {

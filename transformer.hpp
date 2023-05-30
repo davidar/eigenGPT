@@ -1,10 +1,7 @@
-#include <fmt/core.h>
+#include <cmath>
 
 #include "model_offsets.h"
-#include "safetensors.hpp"
 #include "vocab.h"
-
-using fmt::format;
 
 constexpr size_t n_ctx = 1024;
 constexpr size_t n_embd = 768;
@@ -21,19 +18,19 @@ class TransformerBlock {
       *b_mlp2, *w_ln1, *b_ln1, *w_ln2, *b_ln2;
 
 public:
-  TransformerBlock(safetensors::safetensors_t param, int b)
-      : w_attn1(param.data(block_offsets[b][0])),
-        b_attn1(param.data(block_offsets[b][1])),
-        w_attn2(param.data(block_offsets[b][2])),
-        b_attn2(param.data(block_offsets[b][3])),
-        w_ln1(param.data(block_offsets[b][4])),
-        b_ln1(param.data(block_offsets[b][5])),
-        w_mlp1(param.data(block_offsets[b][6])),
-        b_mlp1(param.data(block_offsets[b][7])),
-        w_mlp2(param.data(block_offsets[b][8])),
-        b_mlp2(param.data(block_offsets[b][9])),
-        w_ln2(param.data(block_offsets[b][10])),
-        b_ln2(param.data(block_offsets[b][11])) {}
+  TransformerBlock(int b)
+      : w_attn1((float *)(storage + block_offsets[b][0])),
+        b_attn1((float *)(storage + block_offsets[b][1])),
+        w_attn2((float *)(storage + block_offsets[b][2])),
+        b_attn2((float *)(storage + block_offsets[b][3])),
+        w_ln1((float *)(storage + block_offsets[b][4])),
+        b_ln1((float *)(storage + block_offsets[b][5])),
+        w_mlp1((float *)(storage + block_offsets[b][6])),
+        b_mlp1((float *)(storage + block_offsets[b][7])),
+        w_mlp2((float *)(storage + block_offsets[b][8])),
+        b_mlp2((float *)(storage + block_offsets[b][9])),
+        w_ln2((float *)(storage + block_offsets[b][10])),
+        b_ln2((float *)(storage + block_offsets[b][11])) {}
 
   void operator()(float x[n_embd]) {
     float norm_x[n_embd];
@@ -108,11 +105,13 @@ class Transformer {
   TransformerBlock *block[n_layer];
 
 public:
-  Transformer(safetensors::safetensors_t param)
-      : wte(param.data(wte_offset)), wpe(param.data(wpe_offset)),
-        w_ln(param.data(w_ln_offset)), b_ln(param.data(b_ln_offset)) {
+  Transformer()
+      : wte((float *)(storage + wte_offset)),
+        wpe((float *)(storage + wpe_offset)),
+        w_ln((float *)(storage + w_ln_offset)),
+        b_ln((float *)(storage + b_ln_offset)) {
     for (int i = 0; i < n_layer; i++) {
-      block[i] = new TransformerBlock(param, i);
+      block[i] = new TransformerBlock(i);
     }
   }
 
