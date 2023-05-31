@@ -1,9 +1,8 @@
 extern const unsigned char _binary_model_safetensors_start[];
 
-int header_size = 14283;
+#define header_size 14283
 
-const unsigned char *storage =
-    _binary_model_safetensors_start + sizeof(uint64_t) + header_size;
+const unsigned char *storage;
 
 #define PARAM(offset) ((float *)(storage + offset))
 

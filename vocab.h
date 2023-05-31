@@ -1,4 +1,4 @@
-constexpr int n_vocab = 50257;
+#define n_vocab 50257
 const char *vocab[n_vocab] = {
     "!",
     "\"",
