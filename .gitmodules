@@ -1,6 +1,0 @@
-[submodule "gpt2"]
-	path = gpt2
-	url = https://huggingface.co/gpt2
-[submodule "gpt2-tokenizer"]
-	path = gpt2-tokenizer
-	url = https://github.com/davidar/gpt2-tokenizer.git

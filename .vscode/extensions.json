@@ -1,10 +1,10 @@
 {
     "recommendations": [
-        "ms-vscode.cmake-tools",
         "ms-vscode.cpptools-extension-pack",
         "xaver.clang-format",
         "mutantdino.resourcemonitor",
         "eamodio.gitlens",
-        "github.copilot"
+        "github.copilot",
+        "ms-vscode.makefile-tools"
     ]
 }
