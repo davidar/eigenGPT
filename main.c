@@ -108,17 +108,6 @@ void run(TransformerBlock *t, float x[n_embd]) {
 float *wte, *wpe, *w_ln, *b_ln;
 TransformerBlock *block[n_layer];
 
-void setup() {
-  storage = _binary_model_safetensors_start + 8 + header_size;
-  wte = PARAM(wte_offset);
-  wpe = PARAM(wpe_offset);
-  w_ln = PARAM(w_ln_offset);
-  b_ln = PARAM(b_ln_offset);
-  for (int i = 0; i < n_layer; i++) {
-    block[i] = newBlock(i);
-  }
-}
-
 int predict(int token, int posn) {
   float x[n_embd];
   FOR_EMBED(i, 1) x[i] = wte[token * n_embd + i] + wpe[posn * n_embd + i];
@@ -159,11 +148,19 @@ int predict(int token, int posn) {
 }
 
 int main() {
+  storage = _binary_model_safetensors_start + 8 + header_size;
+  wte = PARAM(wte_offset);
+  wpe = PARAM(wpe_offset);
+  w_ln = PARAM(w_ln_offset);
+  b_ln = PARAM(b_ln_offset);
+  for (int i = 0; i < n_layer; i++) {
+    block[i] = newBlock(i);
+  }
+
   int seed = time(NULL);
   printf("seed: %d\n", seed);
   srand(seed);
 
-  setup();
   int token = n_vocab - 1;
   for (int posn = 0; posn < n_ctx; posn++) {
     token = predict(token, posn);
