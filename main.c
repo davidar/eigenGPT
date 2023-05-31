@@ -165,6 +165,9 @@ int main() {
   int token = n_vocab - 1;
   for (int posn = 0; posn < n_ctx; posn++) {
     token = predict(token, posn);
+    if (token == n_vocab - 1) {
+      break;
+    }
     fprintf(stderr, "%s", vocab[token]);
   }
 }
