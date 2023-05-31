@@ -129,16 +129,28 @@ public:
       sqnorm += x[i] * x[i];
     }
     FOR_EMBED(i, 1) x[i] = b_ln[i] + w_ln[i] * x[i] / sqrt(sqnorm / n_embd);
+
+    float logit[n_vocab] = {0};
     float max_logit;
-    int max_token;
     for (int token = 0; token < n_vocab; token++) {
-      float logit = 0;
-      FOR_EMBED(i, 1) logit += wte[token * n_embd + i] * x[i];
-      if (token == 0 || logit > max_logit) {
-        max_logit = logit;
-        max_token = token;
+      FOR_EMBED(i, 1) logit[token] += wte[token * n_embd + i] * x[i];
+      if (token == 0 || logit[token] > max_logit) {
+        max_logit = logit[token];
       }
     }
-    return max_token;
+
+    float sum_exp = 0;
+    for (int token = 0; token < n_vocab; token++) {
+      logit[token] = std::exp((logit[token] - max_logit) / 0.7);
+      sum_exp += logit[token];
+    }
+    float r = (float)rand() / RAND_MAX;
+    for (int token = 0; token < n_vocab; token++) {
+      r -= logit[token] / sum_exp;
+      if (r <= 0) {
+        return token;
+      }
+    }
+    return n_vocab - 1;
   }
 };
