@@ -19,18 +19,18 @@ class TransformerBlock {
 
 public:
   TransformerBlock(int b)
-      : w_attn1((float *)(storage + block_offsets[b][0])),
-        b_attn1((float *)(storage + block_offsets[b][1])),
-        w_attn2((float *)(storage + block_offsets[b][2])),
-        b_attn2((float *)(storage + block_offsets[b][3])),
-        w_ln1((float *)(storage + block_offsets[b][4])),
-        b_ln1((float *)(storage + block_offsets[b][5])),
-        w_mlp1((float *)(storage + block_offsets[b][6])),
-        b_mlp1((float *)(storage + block_offsets[b][7])),
-        w_mlp2((float *)(storage + block_offsets[b][8])),
-        b_mlp2((float *)(storage + block_offsets[b][9])),
-        w_ln2((float *)(storage + block_offsets[b][10])),
-        b_ln2((float *)(storage + block_offsets[b][11])) {}
+      : w_attn1(PARAM(block_offsets[b][0])),
+        b_attn1(PARAM(block_offsets[b][1])),
+        w_attn2(PARAM(block_offsets[b][2])),
+        b_attn2(PARAM(block_offsets[b][3])),
+        w_ln1(PARAM(block_offsets[b][4])),
+        b_ln1(PARAM(block_offsets[b][5])),
+        w_mlp1(PARAM(block_offsets[b][6])),
+        b_mlp1(PARAM(block_offsets[b][7])),
+        w_mlp2(PARAM(block_offsets[b][8])),
+        b_mlp2(PARAM(block_offsets[b][9])),
+        w_ln2(PARAM(block_offsets[b][10])),
+        b_ln2(PARAM(block_offsets[b][11])) {}
 
   void operator()(float x[n_embd]) {
     float norm_x[n_embd];
@@ -106,10 +106,10 @@ class Transformer {
 
 public:
   Transformer()
-      : wte((float *)(storage + wte_offset)),
-        wpe((float *)(storage + wpe_offset)),
-        w_ln((float *)(storage + w_ln_offset)),
-        b_ln((float *)(storage + b_ln_offset)) {
+      : wte(PARAM(wte_offset)),
+        wpe(PARAM(wpe_offset)),
+        w_ln(PARAM(w_ln_offset)),
+        b_ln(PARAM(b_ln_offset)) {
     for (int i = 0; i < n_layer; i++) {
       block[i] = new TransformerBlock(i);
     }
