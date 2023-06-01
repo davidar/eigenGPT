@@ -16,21 +16,6 @@ extern const float MODEL[];
 
 #define FOR_EMBED(var, mul) for (int var = 0; var < mul * n_embd; var++)
 
-#define PARAM(offset, i) MODEL[offset / 4 + i]
-
-#define w_attn1(b, i) PARAM(block_offsets[b][0], i)
-#define b_attn1(b, i) PARAM(block_offsets[b][1], i)
-#define w_attn2(b, i) PARAM(block_offsets[b][2], i)
-#define b_attn2(b, i) PARAM(block_offsets[b][3], i)
-#define w_ln1(b, i) PARAM(block_offsets[b][4], i)
-#define b_ln1(b, i) PARAM(block_offsets[b][5], i)
-#define w_mlp1(b, i) PARAM(block_offsets[b][6], i)
-#define b_mlp1(b, i) PARAM(block_offsets[b][7], i)
-#define w_mlp2(b, i) PARAM(block_offsets[b][8], i)
-#define b_mlp2(b, i) PARAM(block_offsets[b][9], i)
-#define w_ln2(b, i) PARAM(block_offsets[b][10], i)
-#define b_ln2(b, i) PARAM(block_offsets[b][11], i)
-
 int n_seq = 0;
 float kv[n_layer][n_ctx][2 * n_embd];
 
@@ -47,10 +32,11 @@ void block(int b, float x[n_embd]) {
   float q[n_embd];
   FOR_EMBED(i, 3) {
     float *qkv = i < n_embd ? &q[i] : &kv[b][n_seq][i - n_embd];
-    *qkv = b_attn1(b, i);
+    *qkv = MODEL[b_attn1_offset[b] + i];
     FOR_EMBED(j, 1) {
-      *qkv += w_attn1(b, j * (3 * n_embd) + i) *
-              (b_ln1(b, j) + w_ln1(b, j) * norm_x[j] / sqrt(sqnorm / n_embd));
+      *qkv += MODEL[w_attn1_offset[b] + j * (3 * n_embd) + i] *
+              (MODEL[b_ln1_offset[b] + j] +
+               MODEL[w_ln1_offset[b] + j] * norm_x[j] / sqrt(sqnorm / n_embd));
     }
   }
 
@@ -71,8 +57,10 @@ void block(int b, float x[n_embd]) {
   }
 
   FOR_EMBED(i, 1) {
-    float r = b_attn2(b, i);
-    FOR_EMBED(j, 1) r += w_attn2(b, j * n_embd + i) * attn[j] / asum[j / D];
+    float r = MODEL[b_attn2_offset[b] + i];
+    FOR_EMBED(j, 1) {
+      r += MODEL[w_attn2_offset[b] + j * n_embd + i] * attn[j] / asum[j / D];
+    }
     x[i] += r;
     sum += r;
   }
@@ -86,17 +74,18 @@ void block(int b, float x[n_embd]) {
   // mlp
   float h[4 * n_embd];
   FOR_EMBED(i, 4) {
-    h[i] = b_mlp1(b, i);
+    h[i] = MODEL[b_mlp1_offset[b] + i];
     FOR_EMBED(j, 1) {
-      h[i] += w_mlp1(b, j * (4 * n_embd) + i) *
-              (b_ln2(b, j) + w_ln2(b, j) * norm_x[j] / sqrt(sqnorm / n_embd));
+      h[i] += MODEL[w_mlp1_offset[b] + j * (4 * n_embd) + i] *
+              (MODEL[b_ln2_offset[b] + j] +
+               MODEL[w_ln2_offset[b] + j] * norm_x[j] / sqrt(sqnorm / n_embd));
     }
     h[i] *= (1 + erf(h[i] / sqrt(2))) / 2;
   }
 
   FOR_EMBED(i, 1) {
-    FOR_EMBED(j, 4) x[i] += w_mlp2(b, j * n_embd + i) * h[j];
-    x[i] += b_mlp2(b, i);
+    FOR_EMBED(j, 4) x[i] += MODEL[w_mlp2_offset[b] + j * n_embd + i] * h[j];
+    x[i] += MODEL[b_mlp2_offset[b] + i];
   }
 }
 

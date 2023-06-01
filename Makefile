@@ -10,10 +10,13 @@ model.bin: model.safetensors
 model.json: model.safetensors
 	tail --bytes=+9 $< | head --bytes=14283 > $@
 
+model_offsets.h: model.json
+	python model_offsets.py > $@
+
 model.o: model.bin
 	ld -r -b binary -o $@ $<
 
-prog: main.o model.o
+prog: main.o model.o model_offsets.h
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
