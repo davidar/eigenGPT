@@ -2,9 +2,7 @@ extern const unsigned char _binary_model_safetensors_start[];
 
 #define header_size 14283
 
-const unsigned char *storage;
-
-#define PARAM(offset) ((float *)(storage + offset))
+#define PARAM(offset) ((float *)(_binary_model_safetensors_start + 8 + header_size + offset))
 
 int wte_offset = 287209472; // wte.weight
 int wpe_offset = 267533312; // wpe.weight
