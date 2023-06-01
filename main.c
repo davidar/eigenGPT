@@ -14,8 +14,7 @@
 
 #define FOR_EMBED(var, mul) for (int var = 0; var < mul * n_embd; var++)
 
-#define STORAGE ((float *)(_binary_model_safetensors_start + 8 + header_size))
-#define PARAM(offset, i) STORAGE[offset / 4 + i]
+#define PARAM(offset, i) _binary_model_bin_start[offset / 4 + i]
 
 #define w_attn1(b, i) PARAM(block_offsets[b][0], i)
 #define b_attn1(b, i) PARAM(block_offsets[b][1], i)

@@ -1,6 +1,4 @@
-extern const unsigned char _binary_model_safetensors_start[];
-
-#define header_size 14283
+extern const float _binary_model_bin_start[];
 
 int wte_offset = 287209472; // wte.weight
 int wpe_offset = 267533312; // wpe.weight
