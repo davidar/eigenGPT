@@ -1,9 +1,7 @@
-extern const float _binary_model_bin_start[];
-
-int wte_offset = 287209472; // wte.weight
-int wpe_offset = 267533312; // wpe.weight
-int w_ln_offset = 9458688;  // ln_f.weight
-int b_ln_offset = 85362688; // ln_f.bias
+int wte_offset = 287209472 / 4; // wte.weight
+int wpe_offset = 267533312 / 4; // wpe.weight
+int w_ln_offset = 9458688 / 4;  // ln_f.weight
+int b_ln_offset = 85362688 / 4; // ln_f.bias
 
 int block_offsets[12][12] = {
     {

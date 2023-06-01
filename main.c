@@ -6,6 +6,8 @@
 #include "model_offsets.h"
 #include "vocab.h"
 
+extern const float MODEL[];
+
 #define n_ctx 1024
 #define n_embd 768
 #define n_head 12
@@ -14,7 +16,7 @@
 
 #define FOR_EMBED(var, mul) for (int var = 0; var < mul * n_embd; var++)
 
-#define PARAM(offset, i) _binary_model_bin_start[offset / 4 + i]
+#define PARAM(offset, i) MODEL[offset / 4 + i]
 
 #define w_attn1(b, i) PARAM(block_offsets[b][0], i)
 #define b_attn1(b, i) PARAM(block_offsets[b][1], i)
@@ -101,8 +103,8 @@ void block(int b, float x[n_embd]) {
 int predict(int token, int posn) {
   float x[n_embd];
   FOR_EMBED(i, 1) {
-    x[i] = PARAM(wte_offset, token * n_embd + i) +
-           PARAM(wpe_offset, posn * n_embd + i);
+    x[i] = MODEL[wte_offset + token * n_embd + i] +
+           MODEL[wpe_offset + posn * n_embd + i];
   }
   for (int i = 0; i < n_layer; i++) {
     block(i, x);
@@ -115,15 +117,15 @@ int predict(int token, int posn) {
     sqnorm += x[i] * x[i];
   }
   FOR_EMBED(i, 1) {
-    x[i] = PARAM(b_ln_offset, i) +
-           PARAM(w_ln_offset, i) * x[i] / sqrt(sqnorm / n_embd);
+    x[i] = MODEL[b_ln_offset + i] +
+           MODEL[w_ln_offset + i] * x[i] / sqrt(sqnorm / n_embd);
   }
 
   float logit[n_vocab] = {0};
   float max_logit;
   for (int token = 0; token < n_vocab; token++) {
     FOR_EMBED(i, 1)
-    logit[token] += PARAM(wte_offset, token * n_embd + i) * x[i];
+    logit[token] += MODEL[wte_offset + token * n_embd + i] * x[i];
     if (token == 0 || logit[token] > max_logit) {
       max_logit = logit[token];
     }

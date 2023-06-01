@@ -1,4 +1,4 @@
-CFLAGS += -Ofast
+CFLAGS += -Ofast -DMODEL=_binary_model_bin_start
 LDFLAGS += -lm
 
 model.safetensors:
@@ -6,6 +6,9 @@ model.safetensors:
 
 model.bin: model.safetensors
 	tail --bytes=+14292 $< > $@
+
+model.json: model.safetensors
+	tail --bytes=+9 $< | head --bytes=14283 > $@
 
 model.o: model.bin
 	ld -r -b binary -o $@ $<
