@@ -1,5 +1,5 @@
-#define n_vocab 50257
-const char *vocab[n_vocab] = {
+#define V 50256
+const char *v[V] = {
     "!",
     "\"",
     "#",
@@ -50276,4 +50276,4 @@ const char *vocab[n_vocab] = {
     " Collider",
     " informants",
     " gazed",
-    "<|endoftext|>"};
+};

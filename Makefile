@@ -1,4 +1,4 @@
-CFLAGS += -Ofast -DMODEL=_binary_model_bin_start
+CFLAGS += -Ofast -DM=_binary_model_bin_start
 LDFLAGS += -lm
 
 model.safetensors:
@@ -16,7 +16,7 @@ model_offsets.h: model.json
 model.o: model.bin
 	ld -r -b binary -o $@ $<
 
-prog: main.o model.o model_offsets.h
+prog: model_offsets.h main.o model.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:

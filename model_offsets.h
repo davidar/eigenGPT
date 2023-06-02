@@ -1,8 +1,8 @@
-int wte_offset = 71802368; // wte.weight
-int wpe_offset = 66883328; // wpe.weight
-int w_ln_offset = 2364672; // ln_f.weight
-int b_ln_offset = 21340672; // ln_f.bias
-int w_attn1_offset[12] = { // h.*.attn.c_attn.weight
+int wt = 71802368; // wte.weight
+int wp = 66883328; // wpe.weight
+int g0 = 2364672; // ln_f.weight
+int c0 = 21340672; // ln_f.bias
+int w1[12] = { // h.*.attn.c_attn.weight
     67670528,
     595200,
     135253248,
@@ -16,7 +16,7 @@ int w_attn1_offset[12] = { // h.*.attn.c_attn.weight
     31245824,
     27117056,
 };
-int b_attn1_offset[12] = { // h.*.attn.c_attn.bias
+int b1[12] = { // h.*.attn.c_attn.bias
     21341440,
     60514048,
     7099392,
@@ -30,7 +30,7 @@ int b_attn1_offset[12] = { // h.*.attn.c_attn.bias
     44110080,
     21338368,
 };
-int w_attn2_offset[12] = { // h.*.attn.c_proj.weight
+int w2[12] = { // h.*.attn.c_proj.weight
     4608,
     128429056,
     16289792,
@@ -44,7 +44,7 @@ int w_attn2_offset[12] = { // h.*.attn.c_proj.weight
     44702208,
     34791680,
 };
-int b_attn2_offset[12] = { // h.*.attn.c_proj.bias
+int b2[12] = { // h.*.attn.c_proj.bias
     2367744,
     40105472,
     21336832,
@@ -58,7 +58,7 @@ int b_attn2_offset[12] = { // h.*.attn.c_proj.bias
     45292032,
     5329152,
 };
-int w_ln1_offset[12] = { // h.*.ln_1.weight
+int g1[12] = { // h.*.ln_1.weight
     112760576,
     43059200,
     21337600,
@@ -72,7 +72,7 @@ int w_ln1_offset[12] = { // h.*.ln_1.weight
     55788544,
     110400512,
 };
-int b_ln1_offset[12] = { // h.*.ln_1.bias
+int c1[12] = { // h.*.ln_1.bias
     60519424,
     53427712,
     112763648,
@@ -86,7 +86,7 @@ int b_ln1_offset[12] = { // h.*.ln_1.bias
     130072064,
     13467136,
 };
-int w_mlp1_offset[12] = { // h.*.mlp.c_fc.weight
+int w3[12] = { // h.*.mlp.c_fc.weight
     28886528,
     58151680,
     112765184,
@@ -100,7 +100,7 @@ int w_mlp1_offset[12] = { // h.*.mlp.c_fc.weight
     24757760,
     10056960,
 };
-int b_mlp1_offset[12] = { // h.*.mlp.c_fc.bias
+int b3[12] = { // h.*.mlp.c_fc.bias
     4735488,
     69440000,
     768,
@@ -114,7 +114,7 @@ int b_mlp1_offset[12] = { // h.*.mlp.c_fc.bias
     130068992,
     33016064,
 };
-int w_mlp2_offset[12] = { // h.*.mlp.c_proj.weight
+int w4[12] = { // h.*.mlp.c_proj.weight
     132893952,
     35381504,
     125021184,
@@ -128,7 +128,7 @@ int w_mlp2_offset[12] = { // h.*.mlp.c_proj.weight
     17928960,
     40106240,
 };
-int b_mlp2_offset[12] = { // h.*.mlp.c_proj.bias
+int b4[12] = { // h.*.mlp.c_proj.bias
     65833216,
     23706880,
     112764416,
@@ -142,7 +142,7 @@ int b_mlp2_offset[12] = { // h.*.mlp.c_proj.bias
     37742336,
     130073600,
 };
-int w_ln2_offset[12] = { // h.*.ln_2.weight
+int g2[12] = { // h.*.ln_2.weight
     16879616,
     13467904,
     44109312,
@@ -156,7 +156,7 @@ int w_ln2_offset[12] = { // h.*.ln_2.weight
     53426944,
     10056192,
 };
-int b_ln2_offset[12] = { // h.*.ln_2.bias
+int c2[12] = { // h.*.ln_2.bias
     51656704,
     23707648,
     55787776,
